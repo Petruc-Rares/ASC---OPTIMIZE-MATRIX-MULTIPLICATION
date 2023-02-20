@@ -1,0 +1,76 @@
+336 CA
+PETRUC RAREȘ
+                            TEMA 2 ASC
+
+IDEE PRINCIPALĂ
+C = B * A * A' + B' * B
+
+Prezentare generală fiecare rezolvare
+
+blas:
+    Am folosit dtrmm pentru calculul produsului A * A', pentru a mă
+lega de restricția din enunț conform căruia A este superior triunghiulară.
+În rest, am realizat operații simple de inmulțire de matrice cu dgemm.
+
+solver_neopt:
+    Fie: AUX_1 = B * A
+         (aici, pentru a mă lega de precizarea din enunț că A
+este superior triunghiulară am iterat cu k de la 0 la j, unde j
+e indexul coloanei curente din A, astfel incât să nu considerăm
+la calcul și elementele egale cu 0 din A)
+
+    Fie: AUX_2 = AUX_1 * A' = B * A * A'
+    (ținând cont în continuare că A este superior triunghiulară,
+deci A' inferior triunghiulară, am realizat inmulțirea iterând
+pe rândurile lui A, respectiv coloanele lui A', similar ca mai devreme)
+
+    Fie: AUX_3 = B' * B
+    (a trebuit să iterez pe rândurile lui B, ca să parcurg cumva
+pe coloanele lui B', in rest ramânand o inmulțire trivială de matrice)
+
+    În final AUX_2 = AUX_2 + AUX_3.
+    
+    Menționez că am eliberat AUX_1 înainte de a aloca spațiu pentru
+AUX_3, cumva cât sa ma asigur că avem memorie suficientă pentru noua
+alocare, deoarece AUX_1 o ocupa degeaba.
+
+solver_opt:
+    Am folosit regiștri pentru variabile de tip acumulator sau pentru
+valori constante aflate în bucla cea mai interioară.
+    Dupa aceea, am folosit pointeri pentru a evita calculele inutile/repetate
+de index de rând de tipul nr_coloane * dimensiune_matrice.
+    Am realizat și reordonări de bucle acolo unde era posibil. Spre exemplu,
+la calculele unde se ține cont de faptul că matricea A este superior
+triunghiulară și se itereaza în forul după k până la j, nu putea exista
+o ordonare mai bună, ca sa pastram dependenta j -> k.
+
+Rezultate cachegrind
+
+În cadrul opt avem mai puține I refs decât la neopt, pentru
+că s-au redus operațiile de înmulțire pentru calculul indexului de rând de tipul
+nr_coloane * idx_rând.
+
+Blas realizează totul și mai rapid prin optimizări atât pentru instrucțiuni,
+cât și pentru date.
+
+D refs sunt mai puține în cazul opt decât în neopt, probabil și pentru
+că folosim keyword-ul register pentru variabile ce ar avea altfel timp de acces
+constant în bucla cea mai interioară sau diverși acumulatori, care altfel ar trebui
+aduși din cache/memoria principală.
+
+Despre Branches, sunt similare atât pentru opt și neopt, întrucât nu am adăugat/scos
+ceva logică condițională și nici keyworduri de tipul likely/unlikely. La blas
+avem din nou un număr foarte mic de branchuri, ce contribuie la o rulare foarte
+rapidă a programului.
+
+Intepretare grafice
+
+Atât din fiecare grafic individual, cât și din poza cu graficele din figura
+all_plots.png, reiese că timpul de rulare începe să crească semnificativ din
+momentul în care N depășește valoarea 1000, fiecare grafic luând forma unui
+cot (pantă foarte abruptă).
+
+Totuși, diferențele ca timp de rulare se vad foarte bine din all_plots_stacked
+unde rulare cu varianta neoptimizată pare să fie constant măcar de 2 mai mică
+decât rularea cu varianta optimizată. Cât despre blas, se vede încă o dată
+cât de rapidă este rularea folosind BLAS Atlas și în această imagine.
